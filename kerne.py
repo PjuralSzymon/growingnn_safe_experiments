@@ -186,9 +186,33 @@ def build_and_train_nn(x_train, y_train, x_val, y_val, vocab_size, input_length,
 import growingnn as gnn
 import os
 def train_growingnn(x_train, y_train, x_val, y_val, labels, input_size, hidden_size, output_size, 
-                     epochs=10, generations=5, model_name="growingnn_model", is_cnn=False):
+                     epochs=10, generations=5, model_name="growingnn_model", is_cnn=False,
+                     batch_size=12, simulation_set_size=20, simulation_alg='montecarlo',
+                     optimizer='sgd', simulation_time=60, simulation_epochs=20,
+                     simulation_scheduler_type='progress_check'):
     """
     Train a GrowingNN model with proper shape handling
+    
+    Args:
+        x_train: Training data
+        y_train: Training labels
+        x_val: Validation data
+        y_val: Validation labels
+        labels: List of label names
+        input_size: Size of input layer
+        hidden_size: Size of hidden layer
+        output_size: Size of output layer
+        epochs: Number of epochs to train
+        generations: Number of generations for growing
+        model_name: Name of the model
+        is_cnn: Whether to use CNN architecture
+        batch_size: Batch size for training
+        simulation_set_size: Size of simulation set
+        simulation_alg: Simulation algorithm to use ('montecarlo')
+        optimizer: Optimizer to use ('adam', 'sgd')
+        simulation_time: Time for simulation in seconds
+        simulation_epochs: Number of epochs for simulation
+        simulation_scheduler_type: Type of simulation scheduler ('progress_check' or 'constant')
     """
     logging.info("Training an Adaptive Neural Network with GrowingNN")
     logging.info(f"Original shapes - x_train: {x_train.shape}, y_train: {y_train.shape}")
@@ -211,6 +235,36 @@ def train_growingnn(x_train, y_train, x_val, y_val, labels, input_size, hidden_s
     logging.info(f"- x_val: {x_val.shape}")
     logging.info(f"- y_val: {y_val.shape}")
     
+    # Map simulation algorithm string to growingnn algorithm
+    simulation_alg_map = {
+        'montecarlo': gnn.montecarlo_alg,
+        'greedy': gnn.greedy_alg,
+        'random': gnn.random_alg
+    }
+    
+    # Map simulation scheduler type string to growingnn scheduler type
+    scheduler_type_map = {
+        'progress_check': gnn.SimulationScheduler.PROGRESS_CHECK,
+        'constant': gnn.SimulationScheduler.CONSTANT
+    }
+    
+    # Get the appropriate simulation algorithm
+    simulation_alg_obj = simulation_alg_map.get(simulation_alg.lower(), gnn.montecarlo_alg)
+    
+    # Get the appropriate scheduler type
+    scheduler_type = scheduler_type_map.get(simulation_scheduler_type.lower(), gnn.SimulationScheduler.PROGRESS_CHECK)
+    
+    # Create optimizer based on string parameter
+    if optimizer.lower() == 'adam':
+        optimizer_obj = gnn.AdamOptimizer()
+    else:
+        optimizer_obj = gnn.SGDOptimizer()
+    
+    logging.info(f"Using optimizer: {optimizer}")
+    logging.info(f"Using simulation algorithm: {simulation_alg}")
+    logging.info(f"Simulation time: {simulation_time}, Simulation epochs: {simulation_epochs}")
+    logging.info(f"Simulation scheduler type: {simulation_scheduler_type}")
+    
     try:
         trained_model = gnn.trainer.train(
             path="./model_output/",
@@ -228,22 +282,22 @@ def train_growingnn(x_train, y_train, x_val, y_val, labels, input_size, hidden_s
             input_shape=None,             
             kernel_size=None,   
             deepth=2,  
-            batch_size=12, 
-            simulation_set_size=20, 
-            simulation_alg=gnn.montecarlo_alg, 
+            batch_size=batch_size, 
+            simulation_set_size=simulation_set_size, 
+            simulation_alg=simulation_alg_obj, 
             sim_set_generator=gnn.create_simulation_set_SAMLE,
             simulation_scheduler=gnn.SimulationScheduler(
-                gnn.SimulationScheduler.PROGRESS_CHECK, 
-                simulation_time=60, 
-                simulation_epochs=20
+                scheduler_type, 
+                simulation_time=simulation_time, 
+                simulation_epochs=simulation_epochs
             ),
             lr_scheduler=gnn.LearningRateScheduler(
                 gnn.LearningRateScheduler.PROGRESIVE, 
                 0.03, 0.8
             ),
             loss_function=gnn.Loss.multiclass_cross_entropy,
-            activation_fun=gnn.Activations.Sigmoid,
-            optimizer=gnn.optimizers.SGDOptimizer()
+            optimizer=optimizer_obj,
+            input_paths=1
         )
 
         logging.info("GrowingNN model training complete")
@@ -571,7 +625,6 @@ class GrowingNNClassifier(BaseTimeSeriesClassifier):
                 Config.GrowingNN.LR_DECAY
             ),
             loss_function=gnn.Loss.multiclass_cross_entropy,
-            activation_fun=gnn.Activations.Sigmoid,
             optimizer=gnn.optimizers.SGDOptimizer()
         )
         return self.model

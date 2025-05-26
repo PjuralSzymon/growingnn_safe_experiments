@@ -38,7 +38,7 @@ DATASETS = [
 # Hyperparameters
 WORD_LENGTH = 4
 EMBEDDING_DIM = 4
-EPOCHS = 5  # Reduced from 10
+EPOCHS = 2  # Reduced from 10
 GENERATIONS = 3  # Reduced from 5
 
 def run_comparison():
