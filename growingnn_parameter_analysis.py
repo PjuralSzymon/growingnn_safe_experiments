@@ -16,6 +16,12 @@ from visualization_utils import (
     print_current_best_configs
 )
 
+# ===== EXPERIMENT MODE CONTROL =====
+# Set to None for new experiment, or provide folder path to continue from previous run
+# Example: "growingnn_analysis/exp_20240315_123456"
+CONTINUE_FROM = "growingnn_analysis\exp_20250525_123657"  
+# ===================================
+
 # Configure logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
@@ -72,19 +78,55 @@ def format_time_remaining(seconds):
     
     return " ".join(parts)
 
+def load_previous_results(experiment_folder):
+    """Load results from a previous experiment."""
+    csv_path = os.path.join(experiment_folder, "parameter_analysis_results.csv")
+    if os.path.exists(csv_path):
+        return pd.read_csv(csv_path)
+    return None
+
+def is_experiment_completed(previous_results, dataset, params):
+    """Check if a specific experiment has already been completed."""
+    if previous_results is None:
+        return False
+    
+    # Create a mask for the current dataset
+    dataset_mask = previous_results['dataset'] == dataset
+    
+    # For each parameter, check if it matches
+    for param_name, param_value in params.items():
+        dataset_mask &= (previous_results[param_name] == param_value)
+    
+    # Check if we have any matching results
+    return dataset_mask.any()
+
 def run_parameter_analysis():
     """Run parameter analysis for GrowingNN algorithm."""
-    # Create a unique experiment folder
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    experiment_folder = f"growingnn_analysis/exp_{timestamp}"
-    os.makedirs(experiment_folder, exist_ok=True)
+    # Create or use experiment folder based on CONTINUE_FROM
+    if CONTINUE_FROM:
+        experiment_folder = CONTINUE_FROM
+        logging.info(f"Continuing from previous experiment: {experiment_folder}")
+        previous_results = load_previous_results(experiment_folder)
+        if previous_results is None:
+            logging.warning(f"No previous results found in {experiment_folder}, starting new experiment")
+            previous_results = pd.DataFrame()
+    else:
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        experiment_folder = f"growingnn_analysis/exp_{timestamp}"
+        os.makedirs(experiment_folder, exist_ok=True)
+        previous_results = pd.DataFrame()
+        logging.info(f"Starting new experiment: {experiment_folder}")
     
     # Create a folder for real-time graphs
     graphs_folder = os.path.join(experiment_folder, "real_time_graphs")
     os.makedirs(graphs_folder, exist_ok=True)
     
+    # Create a common folder for aggregated visualizations
+    common_graphs_folder = os.path.join(graphs_folder, "common")
+    os.makedirs(common_graphs_folder, exist_ok=True)
+    
     # Store results
-    results = []
+    results = previous_results.to_dict('records') if not previous_results.empty else []
     
     # Generate all parameter combinations
     param_names = list(PARAMETER_GRID.keys())
@@ -93,20 +135,33 @@ def run_parameter_analysis():
     
     # Calculate total number of experiments
     total_experiments = len(DATASETS) * len(param_combinations)
-    completed_experiments = 0
+    completed_experiments = len(results)
     start_time = time.time()
     
     # Log experiment setup
     logging.info(f"Starting parameter analysis with {len(DATASETS)} datasets and {len(param_combinations)} parameter combinations")
     logging.info(f"Total experiments to run: {total_experiments}")
+    logging.info(f"Already completed: {completed_experiments}")
+    logging.info(f"Remaining experiments: {total_experiments - completed_experiments}")
     logging.info(f"Parameter grid: {PARAMETER_GRID}")
     
     # Create a CSV file to save results incrementally
     csv_path = os.path.join(experiment_folder, "parameter_analysis_results.csv")
-    pd.DataFrame().to_csv(csv_path, index=False)
+    if not os.path.exists(csv_path):
+        pd.DataFrame().to_csv(csv_path, index=False)
     
     # Track best configurations for each dataset
     best_configs = {dataset: {'accuracy': 0.0, 'params': None} for dataset in DATASETS}
+    
+    # Update best configs from previous results
+    if not previous_results.empty:
+        for dataset in DATASETS:
+            dataset_results = previous_results[previous_results['dataset'] == dataset]
+            if not dataset_results.empty:
+                best_idx = dataset_results['accuracy'].idxmax()
+                best_configs[dataset]['accuracy'] = dataset_results.loc[best_idx, 'accuracy']
+                best_configs[dataset]['params'] = {param: dataset_results.loc[best_idx, param] 
+                                                 for param in PARAMETER_GRID.keys()}
     
     # Run experiments for each dataset and parameter combination
     for dataset_idx, dataset in enumerate(DATASETS):
@@ -161,6 +216,11 @@ def run_parameter_analysis():
         # Run experiments for each parameter combination
         for i, param_values in enumerate(param_combinations):
             params = dict(zip(param_names, param_values))
+            
+            # Skip if this experiment was already completed
+            if is_experiment_completed(previous_results, dataset, params):
+                logging.info(f"Skipping already completed experiment for {dataset} with params {params}")
+                continue
             
             # Update progress
             completed_experiments += 1
@@ -245,6 +305,9 @@ def run_parameter_analysis():
             
             # Generate real-time visualizations after each experiment
             generate_real_time_visualizations(results_df, dataset_graphs_folder, dataset, PARAMETER_GRID)
+            
+            # Generate aggregated visualizations for all datasets
+            generate_real_time_visualizations(results_df, common_graphs_folder, "all_datasets", PARAMETER_GRID)
             
             # Print current best configurations
             print_current_best_configs(best_configs)

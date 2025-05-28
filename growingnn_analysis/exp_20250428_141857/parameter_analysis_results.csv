@@ -1,0 +1,16 @@
+dataset,accuracy,error,epochs,generations,hidden_size,batch_size,simulation_set_size,simulation_alg,optimizer,simulation_time,simulation_epochs
+ArrowHead,0.4418604651162791,,30,4,32,32,50,montecarlo,adam,30,10
+ArrowHead,0.3953488372093023,,30,4,32,32,50,montecarlo,adam,30,20
+ArrowHead,0.5581395348837209,,30,4,32,32,50,montecarlo,adam,60,10
+ArrowHead,0.4186046511627907,,30,4,32,32,50,montecarlo,adam,60,20
+ArrowHead,0.5348837209302325,,30,4,32,32,50,montecarlo,sgd,30,10
+ArrowHead,0.4418604651162791,,30,4,32,32,50,montecarlo,sgd,30,20
+ArrowHead,0.3953488372093023,,30,4,32,32,50,montecarlo,sgd,60,10
+ArrowHead,0.5116279069767442,,30,4,32,32,50,montecarlo,sgd,60,20
+ArrowHead,0.4418604651162791,,30,4,32,32,100,montecarlo,adam,30,10
+ArrowHead,0.4418604651162791,,30,4,32,32,100,montecarlo,adam,30,20
+ArrowHead,0.4883720930232558,,30,4,32,32,100,montecarlo,adam,60,10
+ArrowHead,0.46511627906976744,,30,4,32,32,100,montecarlo,adam,60,20
+ArrowHead,0.5348837209302325,,30,4,32,32,100,montecarlo,sgd,30,10
+ArrowHead,0.4418604651162791,,30,4,32,32,100,montecarlo,sgd,30,20
+ArrowHead,0.46511627906976744,,30,4,32,32,100,montecarlo,sgd,60,10

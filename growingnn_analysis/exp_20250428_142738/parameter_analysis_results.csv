@@ -1,0 +1,2 @@
+dataset,accuracy,error,epochs,generations,hidden_size,batch_size,simulation_set_size,simulation_alg,optimizer,simulation_time,simulation_epochs,simulation_scheduler_type
+ArrowHead,0.4186046511627907,,30,4,32,32,50,montecarlo,adam,30,10,progress_check

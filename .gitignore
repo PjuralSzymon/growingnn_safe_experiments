@@ -1,12 +1,12 @@
 # Experiment results
 experiments/
-exp_*/
 results/
-*.csv
 *.png
 *.jpg
 *.jpeg
 *.pdf
+*.html
+*.json
 
 # Model outputs
 growingnn_models/

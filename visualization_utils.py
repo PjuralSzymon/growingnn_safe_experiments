@@ -7,8 +7,12 @@ import seaborn as sns
 
 def generate_real_time_visualizations(results_df, graphs_folder, dataset, parameter_grid):
     """Generate real-time visualizations after each experiment."""
-    # Filter results for the current dataset
-    dataset_results = results_df[results_df['dataset'] == dataset]
+    # For "all_datasets", use all results without filtering
+    if dataset == "all_datasets":
+        dataset_results = results_df
+    else:
+        # Filter results for the current dataset
+        dataset_results = results_df[results_df['dataset'] == dataset]
     
     # Skip if no results yet
     if len(dataset_results) == 0:
@@ -112,6 +116,8 @@ def generate_real_time_visualizations(results_df, graphs_folder, dataset, parame
             for param in parameter_grid.keys():
                 table_data.append([param, row[param]])
             table_data.append(['Accuracy', f"{row['accuracy']:.4f}"])
+            if dataset == "all_datasets":
+                table_data.append(['Dataset', row['dataset']])  # Add dataset info for all_datasets view
             table_data.append(['', ''])  # Empty row for separation
         
         # Create table
